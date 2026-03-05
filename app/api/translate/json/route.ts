@@ -1,19 +1,8 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { LANGUAGES, MODELS } from "@/lib/constants";
 import { extractStrings, reconstruct } from "@/lib/json-utils";
-
-const anthropic = createAnthropic({
-  apiKey: process.env.PROXY_TOKEN!,
-  baseURL: process.env.ANTHROPIC_BASE_URL!,
-});
-
-const openai = createOpenAI({
-  apiKey: process.env.PROXY_TOKEN!,
-  baseURL: process.env.OPENAI_BASE_URL!,
-});
+import { anthropic, openai } from "@/lib/ai-clients";
 
 const ALLOWED_LANGS = LANGUAGES;
 const ALLOWED_MODELS = MODELS.map((m) => m.value);

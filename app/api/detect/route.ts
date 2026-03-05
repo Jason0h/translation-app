@@ -1,12 +1,7 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { LANGUAGES } from "@/lib/constants";
-
-const anthropic = createAnthropic({
-  apiKey: process.env.PROXY_TOKEN!,
-  baseURL: process.env.ANTHROPIC_BASE_URL!,
-});
+import { anthropic } from "@/lib/ai-clients";
 
 export async function POST(req: Request) {
   const { text } = await req.json();
