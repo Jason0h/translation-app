@@ -1,7 +1,7 @@
 "use client";
 
-import { useCompletion } from "@ai-sdk/react";
 import { useState } from "react";
+import { useTranslation } from "@/hooks/use-translation";
 import { Button } from "@/components/ui/button";
 import {
   Combobox,
@@ -11,9 +11,11 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from "@/components/ui/combobox";
+import { InputGroupAddon } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeftRight } from "lucide-react";
 import { SiAnthropic, SiOpenai } from "react-icons/si";
+import { cn } from "@/lib/utils";
 import { LANGUAGES, MODELS, RTL_LANGUAGES } from "@/lib/constants";
 
 export function Translator() {
@@ -22,25 +24,14 @@ export function Translator() {
   const [mode, setMode] = useState<"text" | "json">("text");
   const [model, setModel] = useState("claude-sonnet-4-6");
   const [inputText, setInputText] = useState("");
-  const [translatedInput, setTranslatedInput] = useState("");
-  const [translatedTargetLang, setTranslatedTargetLang] = useState("");
 
-  const { completion, complete, isLoading } = useCompletion({
-    api: "/api/translate",
+  const { output, isLoading, isStale, translate } = useTranslation({
+    mode,
+    sourceLang,
+    targetLang,
+    model,
+    inputText,
   });
-
-  const isStale =
-    completion !== "" &&
-    (inputText !== translatedInput || targetLang !== translatedTargetLang);
-
-  function handleTranslate() {
-    if (!inputText.trim()) return;
-    setTranslatedInput(inputText);
-    setTranslatedTargetLang(targetLang);
-    complete(inputText, {
-      body: { sourceLang, targetLang, model },
-    });
-  }
 
   function handleSwap() {
     setSourceLang(targetLang);
@@ -48,16 +39,12 @@ export function Translator() {
   }
 
   function handleSourceLangChange(value: string) {
-    if (value === targetLang) {
-      setTargetLang(sourceLang);
-    }
+    if (value === targetLang) setTargetLang(sourceLang);
     setSourceLang(value);
   }
 
   function handleTargetLangChange(value: string) {
-    if (value === sourceLang) {
-      setSourceLang(targetLang);
-    }
+    if (value === sourceLang) setSourceLang(targetLang);
     setTargetLang(value);
   }
 
@@ -70,6 +57,8 @@ export function Translator() {
     mode === "json"
       ? "Translated JSON will appear here..."
       : "Translation will appear here...";
+
+  const fontClass = mode === "json" ? "font-mono" : "font-sans";
 
   return (
     <main className="flex min-h-screen items-start justify-center p-6 pt-12">
@@ -93,23 +82,10 @@ export function Translator() {
               </Button>
             </div>
 
-            <Combobox
-              items={LANGUAGES}
+            <LanguageCombobox
               value={sourceLang}
-              onValueChange={(v) => v && handleSourceLangChange(v)}
-            >
-              <ComboboxInput className="w-36" placeholder="Language..." />
-              <ComboboxContent>
-                <ComboboxEmpty>No language found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(lang) => (
-                    <ComboboxItem key={lang} value={lang}>
-                      {lang}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              onLanguageChange={handleSourceLangChange}
+            />
           </div>
 
           <Button variant="outline" size="icon" onClick={handleSwap}>
@@ -117,52 +93,12 @@ export function Translator() {
           </Button>
 
           <div className="flex flex-1 items-center justify-between">
-            <Combobox
-              items={LANGUAGES}
+            <LanguageCombobox
               value={targetLang}
-              onValueChange={(v) => v && handleTargetLangChange(v)}
-            >
-              <ComboboxInput className="w-36" placeholder="Language..." />
-              <ComboboxContent>
-                <ComboboxEmpty>No language found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(lang) => (
-                    <ComboboxItem key={lang} value={lang}>
-                      {lang}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+              onLanguageChange={handleTargetLangChange}
+            />
 
-            <Combobox
-              items={MODELS.map((m) => m.value)}
-              value={model}
-              onValueChange={(v) => v && setModel(v)}
-              itemToStringLabel={(v: string) =>
-                MODELS.find((m) => m.value === v)?.label ?? v
-              }
-            >
-              <ComboboxInput className="w-44" placeholder="Model..." />
-              <ComboboxContent>
-                <ComboboxEmpty>No model found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(v) => {
-                    const m = MODELS.find((m) => m.value === v)!;
-                    return (
-                      <ComboboxItem key={v} value={v}>
-                        {m.provider === "openai" ? (
-                          <SiOpenai className="size-3.5 shrink-0" />
-                        ) : (
-                          <SiAnthropic className="size-3.5 shrink-0" />
-                        )}
-                        {m.label}
-                      </ComboboxItem>
-                    );
-                  }}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
+            <ModelCombobox value={model} onModelChange={setModel} />
           </div>
         </div>
 
@@ -173,23 +109,31 @@ export function Translator() {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleTranslate();
+                translate();
               }
             }}
             placeholder={inputPlaceholder}
             dir={RTL_LANGUAGES.has(sourceLang) ? "rtl" : "ltr"}
-            className={`field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 text-sm ${mode === "json" ? "font-mono" : "font-sans"}`}
+            className={cn(
+              "field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 text-sm",
+              fontClass,
+            )}
           />
           <Textarea
-            value={completion}
+            value={output}
             readOnly
             placeholder={outputPlaceholder}
             dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
-            className={`field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0 ${mode === "json" ? "font-mono" : "font-sans"} ${isStale ? "opacity-40" : "opacity-100"}`}
+            className={cn(
+              "field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto",
+              "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
+              fontClass,
+              isStale ? "opacity-40" : "opacity-100",
+            )}
           />
           <Button
             size="sm"
-            onClick={handleTranslate}
+            onClick={translate}
             disabled={isLoading}
             className="absolute right-[calc(50%+1.25rem)] bottom-3"
           >
@@ -198,5 +142,80 @@ export function Translator() {
         </div>
       </div>
     </main>
+  );
+}
+
+function LanguageCombobox({
+  value,
+  onLanguageChange,
+}: {
+  value: string;
+  onLanguageChange: (v: string) => void;
+}) {
+  return (
+    <Combobox
+      items={LANGUAGES}
+      value={value}
+      onValueChange={(v) => v && onLanguageChange(v)}
+    >
+      <ComboboxInput className="w-36" placeholder="Language..." />
+      <ComboboxContent>
+        <ComboboxEmpty>No language found.</ComboboxEmpty>
+        <ComboboxList>
+          {(lang) => (
+            <ComboboxItem key={lang} value={lang}>
+              {lang}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  );
+}
+
+function ModelCombobox({
+  value,
+  onModelChange,
+}: {
+  value: string;
+  onModelChange: (v: string) => void;
+}) {
+  return (
+    <Combobox
+      items={MODELS.map((m) => m.value)}
+      value={value}
+      onValueChange={(v) => v && onModelChange(v)}
+      itemToStringLabel={(v: string) =>
+        MODELS.find((m) => m.value === v)?.label ?? v
+      }
+    >
+      <ComboboxInput className="w-44" placeholder="Model...">
+        <InputGroupAddon align="inline-start">
+          {MODELS.find((m) => m.value === value)?.provider === "openai" ? (
+            <SiOpenai className="size-3.5 shrink-0" />
+          ) : (
+            <SiAnthropic className="size-3.5 shrink-0" />
+          )}
+        </InputGroupAddon>
+      </ComboboxInput>
+      <ComboboxContent>
+        <ComboboxEmpty>No model found.</ComboboxEmpty>
+        <ComboboxList>
+          {(v) => {
+            const m = MODELS.find((m) => m.value === v)!;
+            return (
+              <ComboboxItem key={v} value={v}>
+                {m.provider === "openai" ? (
+                  <SiOpenai className="size-3.5 shrink-0" />
+                ) : (
+                  <SiAnthropic className="size-3.5 shrink-0" />
+                )}
+                {m.label}
+              </ComboboxItem>
+            );
+          }}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   );
 }
