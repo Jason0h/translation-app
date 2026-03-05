@@ -25,17 +25,21 @@ export function useTranslation({
     error: textError,
   } = useCompletion({ api: "/api/translate" });
 
-  const [textTranslatedInput, setTextTranslatedInput] = useState("");
-  const [textTranslatedTargetLang, setTextTranslatedTargetLang] = useState("");
-
   const [jsonOutput, setJsonOutput] = useState("");
   const [jsonLoading, setJsonLoading] = useState(false);
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // tracks what was last submitted per mode, used to derive isStale
+  const [textTranslatedInput, setTextTranslatedInput] = useState("");
+  const [textTranslatedTargetLang, setTextTranslatedTargetLang] = useState("");
   const [jsonTranslatedInput, setJsonTranslatedInput] = useState("");
   const [jsonTranslatedTargetLang, setJsonTranslatedTargetLang] = useState("");
+
+  // gates output/error/detection visibility — only show results from the last attempted mode
   const [lastAttemptedMode, setLastAttemptedMode] = useState<
     "text" | "json" | null
   >(null);
-  const [jsonError, setJsonError] = useState<string | null>(null);
+
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
   const [detectedInput, setDetectedInput] = useState<string | null>(null);
 
@@ -100,6 +104,7 @@ export function useTranslation({
       setLastAttemptedMode("text");
       setTextTranslatedInput(inputText);
       setTextTranslatedTargetLang(targetLang);
+      // capture at call time to avoid stale closure in the async detect call
       const capturedInput = inputText;
       complete(inputText, { body: { sourceLang, targetLang, model } }).then(
         async () => {
