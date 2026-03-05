@@ -113,29 +113,27 @@ export function Translator() {
               fontClass,
             )}
           />
-          <div className="relative flex-1">
-            <Textarea
-              value={output}
-              readOnly
-              placeholder={
-                mode === "json"
-                  ? "Translated JSON will appear here..."
-                  : "Translated Text will appear here..."
-              }
-              dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
-              className={cn(
-                "field-sizing-fixed size-full cursor-default resize-none overflow-y-auto",
-                "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
-                fontClass,
-                isStale ? "opacity-40" : "opacity-100",
-              )}
-            />
-            {isLoading && !output && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
+          <Textarea
+            value={output}
+            readOnly
+            placeholder={
+              mode === "json"
+                ? "Translated JSON will appear here..."
+                : "Translated Text will appear here..."
+            }
+            dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
+            className={cn(
+              "field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto",
+              "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
+              fontClass,
+              isStale ? "opacity-40" : "opacity-100",
             )}
-          </div>
+          />
+          {isLoading && !output && (
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex w-[calc(50%-0.5rem)] items-center justify-center">
+              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            </div>
+          )}
           <Button
             size="sm"
             onClick={translate}
