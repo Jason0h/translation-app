@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "@/hooks/use-translation";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/combobox";
 import { InputGroupAddon } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeftRight, Loader2 } from "lucide-react";
+import { ArrowLeftRight, Loader2, Upload } from "lucide-react";
 import { SiAnthropic, SiOpenai } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { LANGUAGES, MODELS, RTL_LANGUAGES } from "@/lib/constants";
@@ -24,6 +24,7 @@ export function Translator() {
   const [mode, setMode] = useState<"text" | "json">("text");
   const [model, setModel] = useState("claude-sonnet-4-6");
   const [inputText, setInputText] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { output, isLoading, isStale, translate } = useTranslation({
     mode,
@@ -32,6 +33,19 @@ export function Translator() {
     model,
     inputText,
   });
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    const text = await file.text();
+    try {
+      JSON.parse(text);
+      setInputText(text);
+    } catch {
+      // invalid JSON — leave textarea unchanged
+    }
+  }
 
   function handleSwap() {
     setSourceLang(targetLang);
@@ -55,20 +69,38 @@ export function Translator() {
       <div className="flex w-full max-w-5xl flex-col gap-4">
         <div className="flex items-center gap-4">
           <div className="flex flex-1 items-center justify-between">
-            <div className="flex items-center overflow-hidden rounded-md border">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center overflow-hidden rounded-md border">
+                <Button
+                  variant={mode === "text" ? "default" : "ghost"}
+                  className="rounded-none"
+                  onClick={() => setMode("text")}
+                >
+                  Text
+                </Button>
+                <Button
+                  variant={mode === "json" ? "default" : "ghost"}
+                  className="rounded-none border-l"
+                  onClick={() => setMode("json")}
+                >
+                  JSON
+                </Button>
+              </div>
+
+              <input
+                type="file"
+                accept=".json,application/json"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileUpload}
+              />
               <Button
-                variant={mode === "text" ? "default" : "ghost"}
-                className="rounded-none"
-                onClick={() => setMode("text")}
+                variant="outline"
+                disabled={mode !== "json"}
+                onClick={() => fileInputRef.current?.click()}
               >
-                Text
-              </Button>
-              <Button
-                variant={mode === "json" ? "default" : "ghost"}
-                className="rounded-none border-l"
-                onClick={() => setMode("json")}
-              >
-                JSON
+                <Upload className="h-4 w-4" />
+                Upload
               </Button>
             </div>
 
@@ -126,10 +158,12 @@ export function Translator() {
               "field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto",
               "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
               fontClass,
-              isStale ? "opacity-40" : "opacity-100",
+              isStale || (isLoading && mode === "json")
+                ? "opacity-40"
+                : "opacity-100",
             )}
           />
-          {isLoading && !output && (
+          {isLoading && (mode === "json" || !output) && (
             <div className="pointer-events-none absolute inset-y-0 right-0 flex w-[calc(50%-0.5rem)] items-center justify-center">
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             </div>
