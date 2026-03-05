@@ -1,5 +1,5 @@
-import { ComponentExample } from "@/components/component-example";
+import { Translator } from "@/components/translator";
 
 export default function Page() {
-  return <ComponentExample />;
+  return <Translator />;
 }
