@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeftRight } from "lucide-react";
-import { LANGUAGES, MODELS } from "@/lib/constants";
+import { SiAnthropic, SiOpenai } from "react-icons/si";
+import { LANGUAGES, MODELS, RTL_LANGUAGES } from "@/lib/constants";
 
 export function Translator() {
   const [sourceLang, setSourceLang] = useState("English");
@@ -22,16 +23,20 @@ export function Translator() {
   const [model, setModel] = useState("claude-sonnet-4-6");
   const [inputText, setInputText] = useState("");
   const [translatedInput, setTranslatedInput] = useState("");
+  const [translatedTargetLang, setTranslatedTargetLang] = useState("");
 
   const { completion, complete, isLoading } = useCompletion({
     api: "/api/translate",
   });
 
-  const isStale = completion !== "" && inputText !== translatedInput;
+  const isStale =
+    completion !== "" &&
+    (inputText !== translatedInput || targetLang !== translatedTargetLang);
 
   function handleTranslate() {
     if (!inputText.trim()) return;
     setTranslatedInput(inputText);
+    setTranslatedTargetLang(targetLang);
     complete(inputText, {
       body: { sourceLang, targetLang, model },
     });
@@ -138,15 +143,23 @@ export function Translator() {
                 MODELS.find((m) => m.value === v)?.label ?? v
               }
             >
-              <ComboboxInput className="w-36" placeholder="Model..." />
+              <ComboboxInput className="w-44" placeholder="Model..." />
               <ComboboxContent>
                 <ComboboxEmpty>No model found.</ComboboxEmpty>
                 <ComboboxList>
-                  {(v) => (
-                    <ComboboxItem key={v} value={v}>
-                      {MODELS.find((m) => m.value === v)?.label}
-                    </ComboboxItem>
-                  )}
+                  {(v) => {
+                    const m = MODELS.find((m) => m.value === v)!;
+                    return (
+                      <ComboboxItem key={v} value={v}>
+                        {m.provider === "openai" ? (
+                          <SiOpenai className="size-3.5 shrink-0" />
+                        ) : (
+                          <SiAnthropic className="size-3.5 shrink-0" />
+                        )}
+                        {m.label}
+                      </ComboboxItem>
+                    );
+                  }}
                 </ComboboxList>
               </ComboboxContent>
             </Combobox>
@@ -164,13 +177,15 @@ export function Translator() {
               }
             }}
             placeholder={inputPlaceholder}
-            className="field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 font-mono text-sm"
+            dir={RTL_LANGUAGES.has(sourceLang) ? "rtl" : "ltr"}
+            className={`field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 text-sm ${mode === "json" ? "font-mono" : "font-sans"}`}
           />
           <Textarea
             value={completion}
             readOnly
             placeholder={outputPlaceholder}
-            className={`field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto bg-muted font-mono text-sm transition-opacity focus-visible:border-input focus-visible:ring-0 ${isStale ? "opacity-40" : "opacity-100"}`}
+            dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
+            className={`field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0 ${mode === "json" ? "font-mono" : "font-sans"} ${isStale ? "opacity-40" : "opacity-100"}`}
           />
           <Button
             size="sm"
