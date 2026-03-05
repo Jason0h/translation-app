@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Running Locally
 
-## Getting Started
-
-First, run the development server:
+1. Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create a `.env.local` file in the project root:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+PROXY_TOKEN=your-provided-token
+OPENAI_BASE_URL=https://hiring-proxy.gtx.dev/openai
+ANTHROPIC_BASE_URL=https://hiring-proxy.gtx.dev/anthropic
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Start the development server:
 
-## Learn More
+```bash
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Implementation Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+I used the Vercel AI SDK rather than the raw OpenAI/Anthropic SDKs.
+This gave a unified interface across providers and made streaming
+straightforward — text translation streams via `streamText` on the
+server and `useCompletion` on the client.
 
-## Deploy on Vercel
+For JSON translation, string values are extracted from the input,
+translated in a single batch call, then used to reconstruct the original
+structure. Keys are never sent to the model, so it is impossible for
+them to be translated. User content is also wrapped in random UUID tags
+so the model can unambiguously distinguish instructions from content,
+guarding against prompt injection.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+After each translation, a lightweight language detection call runs in
+the background. If the detected language differs from the selected source
+language, a prompt appears offering to switch. Translation works
+regardless of what source language is selected — this is purely a UX
+convenience.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+RTL text direction is automatically applied to the input and output
+panels for Arabic, Persian, and Urdu.
+
+Styling and components are built with shadcn/ui.
+
+As a final note, I considered internationalizing the UI using GT but 
+decided it was out of scope for this assignment.
+
+Enjoy!
