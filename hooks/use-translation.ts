@@ -43,7 +43,9 @@ export function useTranslation({
   const output =
     mode === lastAttemptedMode
       ? mode === "json"
-        ? jsonOutput
+        ? jsonLoading
+          ? ""
+          : jsonOutput
         : completion
       : "";
 
