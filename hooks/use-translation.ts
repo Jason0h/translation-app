@@ -28,6 +28,7 @@ export function useTranslation({
   >(null);
 
   const active = mode === "json" ? json : text;
+  const lastActive = lastAttemptedMode === "json" ? json : text;
 
   function translate() {
     if (!inputText.trim()) return;
@@ -42,7 +43,7 @@ export function useTranslation({
     isLoading: active.isLoading,
     isStale: onLastAttemptedMode && active.isStale,
     error: onLastAttemptedMode ? active.error : null,
-    detectedLanguage: active.detectedLanguage,
+    detectedLanguage: lastActive.detectedLanguage,
     translate,
   };
 }
