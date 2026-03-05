@@ -26,13 +26,14 @@ export function Translator() {
   const [inputText, setInputText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { output, isLoading, isStale, error, translate } = useTranslation({
-    mode,
-    sourceLang,
-    targetLang,
-    model,
-    inputText,
-  });
+  const { output, isLoading, isStale, error, detectedLanguage, translate } =
+    useTranslation({
+      mode,
+      sourceLang,
+      targetLang,
+      model,
+      inputText,
+    });
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -170,6 +171,18 @@ export function Translator() {
               <Loader2 className="size-5 animate-spin text-muted-foreground" />
             </div>
           )}
+          {detectedLanguage &&
+            detectedLanguage !== "Unknown" &&
+            detectedLanguage !== sourceLang && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSourceLang(detectedLanguage)}
+                className="absolute bottom-3 left-3"
+              >
+                Switch to {detectedLanguage}?
+              </Button>
+            )}
           <Button
             size="sm"
             onClick={translate}

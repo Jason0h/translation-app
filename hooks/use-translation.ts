@@ -36,6 +36,8 @@ export function useTranslation({
     "text" | "json" | null
   >(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null);
+  const [detectedInput, setDetectedInput] = useState<string | null>(null);
 
   const isLoading = mode === "json" ? jsonLoading : textLoading;
   const output =
@@ -82,8 +84,10 @@ export function useTranslation({
           );
           return;
         }
-        const { result } = await res.json();
+        const { result, detectedLanguage: detected } = await res.json();
         setJsonOutput(JSON.stringify(result, null, 2));
+        setDetectedLanguage(detected ?? null);
+        setDetectedInput(inputText);
       } catch {
         setJsonOutput("");
         setJsonError("Translation failed. Please try again.");
@@ -94,7 +98,21 @@ export function useTranslation({
       setLastAttemptedMode("text");
       setTextTranslatedInput(inputText);
       setTextTranslatedTargetLang(targetLang);
-      complete(inputText, { body: { sourceLang, targetLang, model } });
+      const capturedInput = inputText;
+      complete(inputText, { body: { sourceLang, targetLang, model } }).then(
+        async () => {
+          const res = await fetch("/api/detect", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: capturedInput }),
+          });
+          if (res.ok) {
+            const { language } = await res.json();
+            setDetectedLanguage(language ?? null);
+            setDetectedInput(capturedInput);
+          }
+        },
+      );
     }
   }
 
@@ -107,5 +125,12 @@ export function useTranslation({
           : null
       : null;
 
-  return { output, isLoading, isStale, error, translate };
+  return {
+    output,
+    isLoading,
+    isStale,
+    error,
+    detectedLanguage: inputText === detectedInput ? detectedLanguage : null,
+    translate,
+  };
 }
