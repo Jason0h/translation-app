@@ -1,46 +1,45 @@
 "use client";
 
+import { useCompletion } from "@ai-sdk/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeftRight } from "lucide-react";
-
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-];
-
-const MODELS = [
-  { value: "claude-haiku-4-5-20251001", label: "Haiku" },
-  { value: "claude-sonnet-4-6", label: "Sonnet" },
-  { value: "claude-opus-4-6", label: "Opus" },
-];
+import { LANGUAGES, MODELS } from "@/lib/constants";
 
 export function Translator() {
-  const [sourceLang, setSourceLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("es");
+  const [sourceLang, setSourceLang] = useState("English");
+  const [targetLang, setTargetLang] = useState("Spanish");
   const [mode, setMode] = useState<"text" | "json">("text");
   const [model, setModel] = useState("claude-sonnet-4-6");
   const [inputText, setInputText] = useState("");
-  const [outputText, setOutputText] = useState("");
+  const [translatedInput, setTranslatedInput] = useState("");
+
+  const { completion, complete, isLoading } = useCompletion({
+    api: "/api/translate",
+  });
+
+  const isStale = completion !== "" && inputText !== translatedInput;
 
   function handleTranslate() {
-    // TODO: call API
+    if (!inputText.trim()) return;
+    setTranslatedInput(inputText);
+    complete(inputText, {
+      body: { sourceLang, targetLang, model },
+    });
   }
 
   function handleSwap() {
     setSourceLang(targetLang);
     setTargetLang(sourceLang);
-    setInputText(outputText);
-    setOutputText("");
   }
 
   function handleSourceLangChange(value: string) {
@@ -89,18 +88,23 @@ export function Translator() {
               </Button>
             </div>
 
-            <Select value={sourceLang} onValueChange={handleSourceLangChange}>
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              items={LANGUAGES}
+              value={sourceLang}
+              onValueChange={(v) => v && handleSourceLangChange(v)}
+            >
+              <ComboboxInput className="w-36" placeholder="Language..." />
+              <ComboboxContent>
+                <ComboboxEmpty>No language found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(lang) => (
+                    <ComboboxItem key={lang} value={lang}>
+                      {lang}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <Button variant="outline" size="icon" onClick={handleSwap}>
@@ -108,35 +112,48 @@ export function Translator() {
           </Button>
 
           <div className="flex flex-1 items-center justify-between">
-            <Select value={targetLang} onValueChange={handleTargetLangChange}>
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              items={LANGUAGES}
+              value={targetLang}
+              onValueChange={(v) => v && handleTargetLangChange(v)}
+            >
+              <ComboboxInput className="w-36" placeholder="Language..." />
+              <ComboboxContent>
+                <ComboboxEmpty>No language found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(lang) => (
+                    <ComboboxItem key={lang} value={lang}>
+                      {lang}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
 
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger className="w-28">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              items={MODELS.map((m) => m.value)}
+              value={model}
+              onValueChange={(v) => v && setModel(v)}
+              itemToStringLabel={(v: string) =>
+                MODELS.find((m) => m.value === v)?.label ?? v
+              }
+            >
+              <ComboboxInput className="w-36" placeholder="Model..." />
+              <ComboboxContent>
+                <ComboboxEmpty>No model found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(v) => (
+                    <ComboboxItem key={v} value={v}>
+                      {MODELS.find((m) => m.value === v)?.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
         </div>
 
-        <div className="relative flex max-h-[60vh] min-h-[300px] items-stretch gap-4 overflow-y-auto">
+        <div className="relative flex min-h-[300px] items-stretch gap-4">
           <Textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -147,17 +164,18 @@ export function Translator() {
               }
             }}
             placeholder={inputPlaceholder}
-            className="field-sizing-content flex-1 resize-none pb-16 font-mono text-sm"
+            className="field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 font-mono text-sm"
           />
           <Textarea
-            value={outputText}
+            value={completion}
             readOnly
             placeholder={outputPlaceholder}
-            className="field-sizing-fixed flex-1 cursor-default resize-none bg-muted font-mono text-sm focus-visible:border-input focus-visible:ring-0"
+            className={`field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto bg-muted font-mono text-sm transition-opacity focus-visible:border-input focus-visible:ring-0 ${isStale ? "opacity-40" : "opacity-100"}`}
           />
           <Button
             size="sm"
             onClick={handleTranslate}
+            disabled={isLoading}
             className="absolute right-[calc(50%+1.25rem)] bottom-3"
           >
             Translate
