@@ -22,6 +22,7 @@ export function useTranslation({
     completion,
     complete,
     isLoading: textLoading,
+    error: textError,
   } = useCompletion({ api: "/api/translate" });
 
   const [textTranslatedInput, setTextTranslatedInput] = useState("");
@@ -31,13 +32,14 @@ export function useTranslation({
   const [jsonLoading, setJsonLoading] = useState(false);
   const [jsonTranslatedInput, setJsonTranslatedInput] = useState("");
   const [jsonTranslatedTargetLang, setJsonTranslatedTargetLang] = useState("");
-  const [lastTranslatedMode, setLastTranslatedMode] = useState<
+  const [lastAttemptedMode, setLastAttemptedMode] = useState<
     "text" | "json" | null
   >(null);
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   const isLoading = mode === "json" ? jsonLoading : textLoading;
   const output =
-    mode === lastTranslatedMode
+    mode === lastAttemptedMode
       ? mode === "json"
         ? jsonOutput
         : completion
@@ -55,6 +57,8 @@ export function useTranslation({
     if (!inputText.trim()) return;
 
     if (mode === "json") {
+      setLastAttemptedMode("json");
+      setJsonError(null);
       setJsonTranslatedInput(inputText);
       setJsonTranslatedTargetLang(targetLang);
       setJsonLoading(true);
@@ -69,22 +73,39 @@ export function useTranslation({
             model,
           }),
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          setJsonOutput("");
+          setJsonError(
+            res.status === 400
+              ? "Invalid JSON"
+              : "Translation failed. Please try again.",
+          );
+          return;
+        }
         const { result } = await res.json();
         setJsonOutput(JSON.stringify(result, null, 2));
-        setLastTranslatedMode("json");
       } catch {
-        // TODO: handle errors
+        setJsonOutput("");
+        setJsonError("Translation failed. Please try again.");
       } finally {
         setJsonLoading(false);
       }
     } else {
+      setLastAttemptedMode("text");
       setTextTranslatedInput(inputText);
       setTextTranslatedTargetLang(targetLang);
-      setLastTranslatedMode("text");
       complete(inputText, { body: { sourceLang, targetLang, model } });
     }
   }
 
-  return { output, isLoading, isStale, translate };
+  const error =
+    mode === lastAttemptedMode
+      ? mode === "json"
+        ? jsonError
+        : textError
+          ? "Translation failed. Please try again."
+          : null
+      : null;
+
+  return { output, isLoading, isStale, error, translate };
 }

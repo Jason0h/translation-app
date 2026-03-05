@@ -26,7 +26,7 @@ export function Translator() {
   const [inputText, setInputText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { output, isLoading, isStale, translate } = useTranslation({
+  const { output, isLoading, isStale, error, translate } = useTranslation({
     mode,
     sourceLang,
     targetLang,
@@ -146,7 +146,7 @@ export function Translator() {
             )}
           />
           <Textarea
-            value={output}
+            value={error ?? output}
             readOnly
             placeholder={
               mode === "json"
@@ -158,9 +158,11 @@ export function Translator() {
               "field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto",
               "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
               fontClass,
-              isStale || (isLoading && mode === "json")
-                ? "opacity-40"
-                : "opacity-100",
+              error
+                ? "text-destructive"
+                : isStale || (isLoading && mode === "json")
+                  ? "opacity-40"
+                  : "opacity-100",
             )}
           />
           {isLoading && (mode === "json" || !output) && (
