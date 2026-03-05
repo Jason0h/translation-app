@@ -31,18 +31,25 @@ export function useTranslation({
   const [jsonLoading, setJsonLoading] = useState(false);
   const [jsonTranslatedInput, setJsonTranslatedInput] = useState("");
   const [jsonTranslatedTargetLang, setJsonTranslatedTargetLang] = useState("");
+  const [lastTranslatedMode, setLastTranslatedMode] = useState<
+    "text" | "json" | null
+  >(null);
 
   const isLoading = mode === "json" ? jsonLoading : textLoading;
-  const output = mode === "json" ? jsonOutput : completion;
+  const output =
+    mode === lastTranslatedMode
+      ? mode === "json"
+        ? jsonOutput
+        : completion
+      : "";
 
   const isStale =
-    mode === "json"
-      ? jsonOutput !== "" &&
-        (inputText !== jsonTranslatedInput ||
-          targetLang !== jsonTranslatedTargetLang)
-      : completion !== "" &&
-        (inputText !== textTranslatedInput ||
-          targetLang !== textTranslatedTargetLang);
+    output !== "" &&
+    (mode === "json"
+      ? inputText !== jsonTranslatedInput ||
+        targetLang !== jsonTranslatedTargetLang
+      : inputText !== textTranslatedInput ||
+        targetLang !== textTranslatedTargetLang);
 
   async function translate() {
     if (!inputText.trim()) return;
@@ -65,14 +72,16 @@ export function useTranslation({
         if (!res.ok) throw new Error(await res.text());
         const { result } = await res.json();
         setJsonOutput(JSON.stringify(result, null, 2));
-      } catch (e) {
-        setJsonOutput(e instanceof Error ? e.message : "Translation failed");
+        setLastTranslatedMode("json");
+      } catch {
+        // TODO: handle errors
       } finally {
         setJsonLoading(false);
       }
     } else {
       setTextTranslatedInput(inputText);
       setTextTranslatedTargetLang(targetLang);
+      setLastTranslatedMode("text");
       complete(inputText, { body: { sourceLang, targetLang, model } });
     }
   }

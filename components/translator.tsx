@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/combobox";
 import { InputGroupAddon } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeftRight, Loader2 } from "lucide-react";
 import { SiAnthropic, SiOpenai } from "react-icons/si";
 import { cn } from "@/lib/utils";
 import { LANGUAGES, MODELS, RTL_LANGUAGES } from "@/lib/constants";
@@ -47,16 +47,6 @@ export function Translator() {
     if (value === sourceLang) setSourceLang(targetLang);
     setTargetLang(value);
   }
-
-  const inputPlaceholder =
-    mode === "json"
-      ? `Enter JSON to translate...\n{\n  "key": "value"\n}`
-      : "Enter text...";
-
-  const outputPlaceholder =
-    mode === "json"
-      ? "Translated JSON will appear here..."
-      : "Translation will appear here...";
 
   const fontClass = mode === "json" ? "font-mono" : "font-sans";
 
@@ -112,25 +102,40 @@ export function Translator() {
                 translate();
               }
             }}
-            placeholder={inputPlaceholder}
+            placeholder={
+              mode === "json"
+                ? `Enter JSON to translate...\n{\n  "key": "value"\n}`
+                : "Enter text..."
+            }
             dir={RTL_LANGUAGES.has(sourceLang) ? "rtl" : "ltr"}
             className={cn(
               "field-sizing-content max-h-[60vh] flex-1 resize-none overflow-y-auto pb-16 text-sm",
               fontClass,
             )}
           />
-          <Textarea
-            value={output}
-            readOnly
-            placeholder={outputPlaceholder}
-            dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
-            className={cn(
-              "field-sizing-fixed flex-1 cursor-default resize-none overflow-y-auto",
-              "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
-              fontClass,
-              isStale ? "opacity-40" : "opacity-100",
+          <div className="relative flex-1">
+            <Textarea
+              value={output}
+              readOnly
+              placeholder={
+                mode === "json"
+                  ? "Translated JSON will appear here..."
+                  : "Translated Text will appear here..."
+              }
+              dir={RTL_LANGUAGES.has(targetLang) ? "rtl" : "ltr"}
+              className={cn(
+                "field-sizing-fixed size-full cursor-default resize-none overflow-y-auto",
+                "bg-muted text-sm transition-opacity focus-visible:border-input focus-visible:ring-0",
+                fontClass,
+                isStale ? "opacity-40" : "opacity-100",
+              )}
+            />
+            {isLoading && !output && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+              </div>
             )}
-          />
+          </div>
           <Button
             size="sm"
             onClick={translate}
